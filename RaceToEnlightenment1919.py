@@ -200,7 +200,7 @@ def graph():
     edges = edgesVar.get()
     edges = re.sub(r'\([()]*\)', '', edges)
     print("edges")
-    edges = edges.split()
+    edges = edges.split(",")
     print("edges to list")
     print(edges)
     edges = reshape(edges)
