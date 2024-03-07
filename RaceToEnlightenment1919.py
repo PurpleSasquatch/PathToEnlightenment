@@ -1,7 +1,7 @@
 #Installation and importing
 
 #Requirments 
-#pip install pyspark tk pyvis
+#pip install pyspark tk pyvis networkx bs4 requests
 
 import requests
 from bs4 import BeautifulSoup
