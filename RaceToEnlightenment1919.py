@@ -13,8 +13,6 @@ from pyvis.network import Network
 import tkinter as tk
 from tkinter.filedialog import asksaveasfile
 
-np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
-
 bgcolour = "#171e29"
 fgcolour = "#32d9d0"
 
@@ -75,9 +73,7 @@ def getLink(paragraphs):
             if 'page does not exist' not in link.get('title'):
                 return link
       else:
-          return None
-          #figure out what to return that shows failure
-         
+          return None        
 
 def newArticle(link):
   WikiURL = "https://en.wikipedia.org/"
@@ -123,7 +119,7 @@ def createEdges(topic):
     thisArticle = newArticle(link)
     soup = getHTML(thisArticle)
     
-  #tempArticles.append('philosophy')
+  tempArticles.append('Philosophy')
   edges = tempArticles
   results.append(iterations)
   return edges, results
@@ -178,11 +174,12 @@ def reshape(articles):
 
 def graph():
     edges = edgesVar.get()
-    edges = re.sub(r'\([()]*\)', '', edges)
+    edges = edges[1:-1]
     print("edges")
     edges = edges.split(",")
     print("edges to list")
     print(edges)
+    #need to split list by entry "philosophy" to display graph correctly, do in reshape?
     edges = reshape(edges)
     print("reshaped edges")
     print(type(edges))
@@ -198,8 +195,6 @@ def graph():
         graphFile = net.from_nx(G)
         #printsHTML can add this to file as text like normal and save 
         c = net.generate_html()
-        print(c)
-        
         f = asksaveasfile(initialfile = 'RaceToEnlightenment',defaultextension=".html",filetypes=[('All Files', '*.*'),("Hyper Text Markup Language Files","*.html")])
         f.write(c)   
         f.close()
@@ -244,7 +239,7 @@ startRaceButton = tk.Button(app, text="Start Race", command=race, bg = bgcolour,
 startRaceButton.grid(column=5,row=11, sticky=tk.E )
 
 rules = tk.Text(app, bg = bgcolour, fg = fgcolour)
-rules.insert(tk.END, "RULES \n 1. Pick the number of topics you would to race \n 2. Press \"Add Topics\"\n 3.If you would like to change any topics you can do so \n 4. Press \"Start Race\" \n 5. The lowest number of steps wins\n 6. If you would like to save a graph of the race press \"Save Graph\"")
+rules.insert(tk.END, "Instructions \n 1. Pick the number of topics you would to race \n 2. Press \"Add Topics\"\n 3.If you would like to change any topics you can do so \n 4. Press \"Start Race\" \n 5. The lowest number of steps wins\n 6. If you would like to save a graph of the race press \"Save Graph\"")
 rules.insert(tk.END,"\n\nProposed Drinking game \nWinner (lowest number of steps) is safe\nLosers have to take a drink\nIf you get lost on the path to enlightenment finish your drink")
 rules.grid(column = 5, row = 0)
 
