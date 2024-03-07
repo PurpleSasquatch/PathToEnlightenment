@@ -167,30 +167,43 @@ def race():
 """#Graphing"""
 
 def reshape(articles):
-  sources = articles[:-1]
-  targets = articles[1:]
-  data = np.stack((sources, targets), axis=1)
-  return data
+  data = []
+  size = len(articles)
+  #Converts list to list of lists based on value of "philosophy" in list 
+  #This allows the graph to be generated and displayed correctly 
+  idx_list=[idx +1 for (idx, val) in enumerate(articles) if val == 'Philosophy']
+  print("idx_list"+str(idx_list))
+  res = [articles[i:j] for i, j in zip([0] + idx_list, idx_list+([size] if idx_list[-1] != size else[]))]
+  print(res)
+  """"
+  for i in res:
+     print(i)
+     sources = res[:-1]
+     targets = res[1:]
+     tempdata = np.stack((sources, targets), axis=1)
+     data = tempdata+data
+  """
+  return res
 
 def graph():
     edges = edgesVar.get()
     edges = edges[1:-1]
-    print("edges")
     edges = edges.split(",")
-    print("edges to list")
-    print(edges)
-    #need to split list by entry "philosophy" to display graph correctly, do in reshape?
+    #Split adds " around existing ' attempt to remove this to properly use idx list in reshape()
+    edges = [re.sub(r'[\W]*', '', topic) for topic in edges]
     edges = reshape(edges)
-    print("reshaped edges")
-    print(type(edges))
     print(edges)
-    if len(edges)>0:
-
-        edges = tuple(edges)
-    
+    if edges:  
+        edgesFinal = [[],[]]  
         G = nx.Graph(Notebook = True)
-        G.add_edges_from(edges)
-            
+        for i in edges:
+          sources = i[:-1]
+          targets = i[1:]
+          tempEdges = np.stack((sources, targets), axis=1)
+          print(tempEdges)
+          edgesFinal = tempEdges+edgesFinal
+
+        G.add_edges_from(edges)    
         net = Network()
         graphFile = net.from_nx(G)
         #printsHTML can add this to file as text like normal and save 
