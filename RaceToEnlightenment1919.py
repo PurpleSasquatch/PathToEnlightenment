@@ -12,6 +12,7 @@ import networkx as nx
 from pyvis.network import Network
 import tkinter as tk
 from tkinter.filedialog import asksaveasfile
+import cProfile
 
 bgcolour = "#171e29"
 fgcolour = "#32d9d0"
@@ -22,10 +23,8 @@ app.configure(bg = bgcolour)
 
 numberOfTopics = []
 resultsDisplay = []
-results = []
-edges = []
+resultsVar = tk.StringVar(app, "")
 edgesVar = tk.StringVar(app, "")
-
 
 """#Functions"""
 
@@ -61,8 +60,6 @@ def getTopicFromRandom():
     return topic
 
 def getLink(paragraphs):
-  textBetweenBrackets = []
-
   for paragraph in paragraphs:
       if paragraph is not None:
         links = paragraph.find_all("a",{"title":True})
@@ -83,6 +80,7 @@ def newArticle(link):
     return newLink
 
 def createEdges(topic):
+  topic = topic.replace('&','%27')
   thisArticle = "https://en.wikipedia.org/wiki/" + topic
   soup = getHTML(thisArticle)
   
@@ -94,15 +92,15 @@ def createEdges(topic):
     iterations+=1
     #If you have hit a loop
     if topic in tempArticles:
-      edges = tempArticles
-      results.append("-1")      
+      edgesVar.set(edgesVar.get() + str(tempArticles))
+      resultsVar.set(resultsVar.get()+"-1,")      
       break
 
     if soup.find('title') != None:
       #if you have hit a search results page
       if 'Search results' in soup.find('title').getText():
-        edges = tempArticles
-        results.append("-2")
+        edgesVar.set(edgesVar.get() + str(tempArticles))
+        resultsVar.set(resultsVar.get()+"-2,") 
         break
 
     paragraphs = getParagraphs(soup)
@@ -110,8 +108,8 @@ def createEdges(topic):
     
     #if you have hit a page of only links
     if link is None:
-        edges = tempArticles
-        results.append("-3")
+        edgesVar.set(edgesVar.get() + str(tempArticles))
+        resultsVar.set(resultsVar.get()+"-3,") 
         break
     
     tempArticles.append(topic)
@@ -119,13 +117,12 @@ def createEdges(topic):
     thisArticle = newArticle(link)
     soup = getHTML(thisArticle)
     
-  tempArticles.append('Philosophy')
-  edges = tempArticles
-  results.append(iterations)
-  return edges, results
+  tempArticles.append('Philosophy,')
+  resultsVar.set(resultsVar.get()+str(iterations)+",") 
+  edgesVar.set(edgesVar.get() + str(tempArticles))
+
 
 def displayResults(results):
-    resultsDisplay.clear()
     index = 0
     for result in results:
         if int(result) > 0:
@@ -134,54 +131,47 @@ def displayResults(results):
             result = "dont try to be too clever"
         else:
             result = " has gotten lost on the path to enlightenment"
-        entry = tk.Entry(app, bg = bgcolour, fg = fgcolour)    
-        entry.grid(column=2,row=index+1,columnspan=2,sticky=tk.N+tk.E+tk.S+tk.W)
+        entry = tk.Entry(app, bg = bgcolour, fg = fgcolour, width = 50)    
+        entry.grid(column=2,row=index+1,sticky=tk.N+tk.E+tk.S+tk.W)
         entry.insert(tk.END, result)
         resultsDisplay.append(entry)
         index = index+1
-    results.clear()
         
 """#Running"""
 
 def race():
+    edgesVar.set("")
+    resultsVar.set("")
     topics = list()
-    topic = ''
     
-    for topic in  [entry.get() for entry in numberOfTopics]:
-        topic = topic.replace('&','%27')
-        topics.append(topic)
+    topics =  [entry.get() for entry in numberOfTopics]
+    
+    list(map(createEdges, topics))
 
-        if len(topics) == 1:
-            output = createEdges(topic)
-            edges = output[0]
-            results = output[1]
-        else:
-            tempOutput = createEdges(topic)
-            tempEdges = tempOutput[0]
-            results = tempOutput[1]
-            edges = edges+tempEdges
-
+    results = resultsVar.get()
+    results = results[:-1].split(",")
+    print(results)
     displayResults(results)
-    edgesVar.set(edges)
-
+    
 """#Graphing"""
 
 def reshape(articles):
-  data = []
   size = len(articles)
   #Converts list to list of lists based on value of "philosophy" in list 
   #This allows the graph to be generated and displayed correctly 
-  idx_list=[idx +1 for (idx, val) in enumerate(articles) if val == 'Philosophy']
+  idx_list=[idx +1 for (idx, val) in enumerate(articles) if val == ' Philosophy']
   res = [articles[i:j] for i, j in zip([0] + idx_list, idx_list+([size] if idx_list[-1] != size else[]))]
   return res
 
 def graph():
     edges = edgesVar.get()
     edges = edges[1:-1]
+    edges = re.sub(r'[\']*|[\"]*|[\[]|[\]]*', '', edges)
+
     edges = edges.split(",")
     #Split adds " around existing ' attempt to remove this to properly use idx list in reshape()
-    edges = [re.sub(r'[\W]*', '', topic) for topic in edges]
     edges = reshape(edges)
+
     if edges:  
         edgesFinal = np.empty((2,0))  
         G = nx.Graph(Notebook = True)
@@ -190,7 +180,6 @@ def graph():
           targets = i[1:]
           tempEdges = np.stack((sources, targets), axis=1)
           G.add_edges_from(tempEdges)
-             
         net = Network()
         graphFile = net.from_nx(G)
         #printsHTML can add this to file as text like normal and save 
@@ -205,7 +194,7 @@ def add_input_fields(num_fields):
     numberOfTopics.clear()
     for topicEntry in range(num_fields):
         # Create an Entry widget for user input and store it in the list
-        entry = tk.Entry(app, bg = bgcolour, fg = fgcolour)
+        entry = tk.Entry(app, bg = bgcolour, fg = fgcolour, width = 50 )
         entry.grid(column=0,row=topicEntry+1,columnspan=2, sticky=tk.N+tk.E+tk.S+tk.W)
         topic = getTopicFromRandom()
         entry.insert(0, topic)
@@ -217,6 +206,8 @@ def getTopics():
        i.destroy()
    for i in resultsDisplay:
        i.destroy()
+
+   resultsDisplay.clear()
 
    try:
       num_fields = int(num_fields_entry.get())
@@ -234,16 +225,18 @@ num_fields_entry.insert(0,'2')
 addTopicsButton = tk.Button(app, text="Add Topics", command=getTopics, bg = bgcolour, fg = fgcolour)
 addTopicsButton.grid(column=1,row=0)
 
-
 startRaceButton = tk.Button(app, text="Start Race", command=race, bg = bgcolour, fg = fgcolour)
 startRaceButton.grid(column=5,row=11, sticky=tk.E )
 
 rules = tk.Text(app, bg = bgcolour, fg = fgcolour)
 rules.insert(tk.END, "Instructions \n 1. Pick the number of topics you would to race \n 2. Press \"Add Topics\"\n 3.If you would like to change any topics you can do so \n 4. Press \"Start Race\" \n 5. The lowest number of steps wins\n 6. If you would like to save a graph of the race press \"Save Graph\"")
 rules.insert(tk.END,"\n\nProposed Drinking game \nWinner (lowest number of steps) is safe\nLosers have to take a drink\nIf you get lost on the path to enlightenment finish your drink")
-rules.grid(column = 5, row = 0)
+rules.grid(column = 5, row = 0, columnspan= 3, rowspan= 10)
 
 saveGraphButton = tk.Button(app, text="SaveGraph", command=graph, bg = bgcolour, fg = fgcolour)
 saveGraphButton.grid(column=5,row=12, sticky=tk.E)
+
+if __name__ == '__race__':
+    cProfile.run('race()')
 
 app.mainloop()
